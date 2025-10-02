@@ -1,55 +1,80 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface WeatherData {
-  temperature: number
-  humidity: number
-  pressure: number
-  altitude: number
-  soilMoisture: number
-  timestamp: Date
+  temperature: number;
+  humidity: number;
+  pressure: number;
+  altitude: number;
+  soilMoisture: number;
+  timestamp: Date;
 }
 
-type TimeRange = "15min" | "6hours" | "12hours" | "24hours"
+type TimeRange = "last" | "half-hour" | "hour";
 
 interface WeatherChartProps {
-  title: string
-  data: WeatherData[]
-  dataKeys: (keyof WeatherData)[]
-  colors: string[]
-  units: string[]
-  timeRange: TimeRange
+  title: string;
+  data: WeatherData[];
+  dataKeys: (keyof WeatherData)[];
+  colors: string[];
+  units: string[];
+  timeRange: TimeRange;
 }
 
-export function WeatherChart({ title, data, dataKeys, colors, units, timeRange }: WeatherChartProps) {
-  const formatTime = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString("es-ES", {
+export function WeatherChart({
+  title,
+  data,
+  dataKeys,
+  colors,
+  units,
+  timeRange,
+}: WeatherChartProps) {
+  const formatTime = (utcString: string) => {
+    console.log({ utcString });
+    const date = new Date(utcString);
+    return date.toLocaleTimeString("es-SV", {
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+      timeZone: "America/El_Salvador",
+    });
+  };
 
   const getFilteredData = () => {
-    const now = new Date()
+    const now = new Date();
     const minutesMap = {
-      "15min": 15,
-      "6hours": 360,
-      "12hours": 720,
-      "24hours": 1440,
-    }
+      last: 15,
+      "half-hour": 48,
+      hour: 24,
+    };
 
-    const minutes = minutesMap[timeRange]
-    const cutoffTime = new Date(now.getTime() - minutes * 60 * 1000)
+    const minutes = minutesMap[timeRange];
+    const cutoffTime = new Date(now.getTime() - minutes * 60 * 1000);
 
-    return data.filter((item) => item.timestamp >= cutoffTime)
-  }
+    return data.filter((item) => item.timestamp >= cutoffTime);
+  };
 
-  const chartData = getFilteredData().map((item) => ({
+  const chartData = data.map((item) => ({
     ...item,
-    time: formatTime(item.timestamp),
-  }))
+    time: formatTime(item.time),
+    foo: "bar",
+  }));
+
+  console.log({ chartData });
+
+  // const chartData = getFilteredData().map((item) => ({
+  //   ...item,
+  //   time: formatTime(item.time),
+  // }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -62,10 +87,10 @@ export function WeatherChart({ title, data, dataKeys, colors, units, timeRange }
             </p>
           ))}
         </div>
-      )
+      );
     }
-    return null
-  }
+    return null;
+  };
 
   return (
     <Card className="weather-gradient border-border/50">
@@ -76,8 +101,15 @@ export function WeatherChart({ title, data, dataKeys, colors, units, timeRange }
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="time" stroke="var(--color-muted-foreground)" fontSize={12} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--color-border)"
+              />
+              <XAxis
+                dataKey="time"
+                stroke="var(--color-muted-foreground)"
+                fontSize={12}
+              />
               <YAxis stroke="var(--color-muted-foreground)" fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
               {dataKeys.map((key, index) => (
@@ -93,14 +125,14 @@ export function WeatherChart({ title, data, dataKeys, colors, units, timeRange }
                     key === "temperature"
                       ? "Temperatura"
                       : key === "humidity"
-                        ? "Humedad"
-                        : key === "pressure"
-                          ? "Presión"
-                          : key === "altitude"
-                            ? "Altitud"
-                            : key === "soilMoisture"
-                              ? "Humedad Suelo"
-                              : key
+                      ? "Humedad"
+                      : key === "pressure"
+                      ? "Presión"
+                      : key === "altitude"
+                      ? "Altitud"
+                      : key === "soilMoisture"
+                      ? "Humedad Suelo"
+                      : key
                   }
                 />
               ))}
@@ -109,5 +141,5 @@ export function WeatherChart({ title, data, dataKeys, colors, units, timeRange }
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

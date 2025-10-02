@@ -48,9 +48,9 @@ export function WeatherMetricCard({ title, value, unit, icon: Icon, color, trend
             <span className="text-sm text-muted-foreground font-mono">{unit}</span>
           </div>
 
-          <Badge variant="outline" className={cn("gap-1 text-xs", getTrendColor())}>
-            {getTrendIcon()}
-          </Badge>
+            <Badge variant="outline" className={cn("gap-1 text-xs", getTrendColor())}>
+              {getTrendIcon()}
+            </Badge>
         </div>
       </CardContent>
     </Card>

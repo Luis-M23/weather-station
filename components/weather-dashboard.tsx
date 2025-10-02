@@ -1,94 +1,180 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { WeatherMetricCard } from "@/components/weather-metric-card"
-import { WeatherChart } from "@/components/weather-chart"
-import { Thermometer, Droplets, Gauge, Mountain, Sprout, RefreshCw, Wifi, WifiOff, CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { WeatherMetricCard } from "@/components/weather-metric-card";
+import { WeatherChart } from "@/components/weather-chart";
+import {
+  Thermometer,
+  Droplets,
+  Gauge,
+  Mountain,
+  Sprout,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  CalendarIcon,
+} from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Database, Tables } from "@/types/database.types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface WeatherData {
-  temperature: number
-  humidity: number
-  pressure: number
-  altitude: number
-  soilMoisture: number
-  timestamp: Date
+  temperature: number;
+  humidity: number;
+  pressure: number;
+  altitude: number;
+  soilMoisture: number;
+  timestamp: Date;
+  time: Date;
 }
 
-type TimeRange = "15min" | "6hours" | "12hours" | "24hours"
+type TimeRange = "last" | "half-hour" | "hour";
 
 export function WeatherDashboard() {
-  const [weatherData, setWeatherData] = useState<WeatherData>({
-    temperature: 23.5,
-    humidity: 65,
-    pressure: 1013.25,
-    altitude: 245,
-    soilMoisture: 42,
-    timestamp: new Date(),
-  })
+  const retrieveData = async () => {
+    try {
+      const date = new Date(selectedDate);
+      const formatted = date.toISOString().slice(0, 10);
 
-  const [isConnected, setIsConnected] = useState(true)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
-  const [historicalData, setHistoricalData] = useState<WeatherData[]>([])
-  const [timeRange, setTimeRange] = useState<TimeRange>("15min")
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+      const params = new URLSearchParams({
+        from: formatted,
+        interval: timeRange,
+      });
+
+      const res = await fetch(`/api/v1/metrics?${params.toString()}`);
+
+      if (!res.ok) throw new Error("Error fetching metrics");
+
+      const data: Tables<"metricas_sensor">[] = await res.json();
+      const lastMetric = data.data.at(-1);
+
+      if (lastMetric) {
+        const newData: WeatherData = {
+          temperature: lastMetric.temperatura_c || 0,
+          humidity: lastMetric.humedad_relativa || 0,
+          pressure: lastMetric.presion_hpa || 0,
+          altitude: lastMetric.altitud_metros || 0,
+          soilMoisture: lastMetric.humedad_suelo_pct || 0,
+          timestamp: new Date(lastMetric.time),
+          time: lastMetric.time,
+        };
+        setWeatherData(newData);
+        setLastUpdate(new Date(lastMetric.time));
+      } else {
+        setWeatherData({
+          temperature: 0,
+          humidity: 0,
+          pressure: 0,
+          altitude: 0,
+          soilMoisture: 0,
+          timestamp: new Date(),
+          time: new Date(),
+        });
+        setLastUpdate(new Date());
+      }
+      setIsConnected(!data.outdated);
+      const historical = data.data.map((row) => ({
+        temperature: row.temperatura_c || 0,
+        humidity: row.humedad_relativa || 0,
+        pressure: row.presion_hpa || 0,
+        altitude: row.altitud_metros || 0,
+        soilMoisture: row.humedad_suelo_pct || 0,
+        timestamp: new Date(row.time),
+        time: row.time,
+      }));
+
+      setHistoricalData(historical);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const [weatherData, setWeatherData] = useState<WeatherData>({
+    temperature: 0,
+    humidity: 0,
+    pressure: 0,
+    altitude: 0,
+    soilMoisture: 0,
+    timestamp: new Date(),
+    time: new Date(),
+  });
+
+  const [isConnected, setIsConnected] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [historicalData, setHistoricalData] = useState<WeatherData[]>([]);
+  const [timeRange, setTimeRange] = useState<TimeRange>("last");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   useEffect(() => {
+    retrieveData();
+
     const interval = setInterval(() => {
-      const newData: WeatherData = {
-        temperature: 20 + Math.random() * 10,
-        humidity: 50 + Math.random() * 30,
-        pressure: 1000 + Math.random() * 30,
-        altitude: 240 + Math.random() * 10,
-        soilMoisture: 30 + Math.random() * 40,
-        timestamp: new Date(),
-      }
+      retrieveData();
+    }, 30000);
 
-      setWeatherData(newData)
-      setLastUpdate(new Date())
-
-      setHistoricalData((prev) => {
-        const updated = [...prev, newData]
-        return updated.slice(-288) // 24 horas a 5 segundos por lectura
-      })
-    }, 5000) // Actualizar cada 5 segundos
-
-    return () => clearInterval(interval)
-  }, [])
+    return () => clearInterval(interval);
+  }, [timeRange, selectedDate]);
 
   const refreshData = () => {
-    setLastUpdate(new Date())
-    // Aquí conectarías con tu API real
-  }
+    retrieveData();
+  };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("es-ES", {
+  const formatDateTime = (date: Date) => {
+    return format(date, "dd/MM/yyyy HH:mm:ss", { locale: es });
+  };
+
+  const formatTime = (utcString: Date) => {
+    const date = new Date(utcString);
+    return date.toLocaleString("es-SV", {
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
-    })
-  }
+      timeZone: "America/El_Salvador",
+    });
+  };
 
   return (
     <div className="min-h-screen p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-balance">Estación Meteorológica</h1>
-          <p className="text-muted-foreground">
-            Monitoreo en tiempo real • Última actualización: {formatTime(lastUpdate)}
-          </p>
+          <h1 className="text-3xl font-bold text-balance">
+            Estación Meteorológica
+          </h1>
+          <p className="text-muted-foreground">Monitoreo en tiempo real</p>
+          <p className="text-muted-foreground">{formatTime(lastUpdate)}</p>
         </div>
 
         <div className="flex items-center gap-4">
-          <Badge variant={isConnected ? "default" : "destructive"} className="gap-2">
-            {isConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+          <Badge
+            variant={isConnected ? "default" : "destructive"}
+            className="gap-2"
+          >
+            {isConnected ? (
+              <Wifi className="h-3 w-3" />
+            ) : (
+              <WifiOff className="h-3 w-3" />
+            )}
             {isConnected ? "Conectado" : "Desconectado"}
           </Badge>
 
@@ -107,7 +193,13 @@ export function WeatherDashboard() {
           unit="°C"
           icon={Thermometer}
           color="weather-temp"
-          trend={weatherData.temperature > 25 ? "up" : weatherData.temperature < 15 ? "down" : "stable"}
+          trend={
+            weatherData.temperature > 25
+              ? "up"
+              : weatherData.temperature < 15
+              ? "down"
+              : "stable"
+          }
         />
 
         <WeatherMetricCard
@@ -116,7 +208,13 @@ export function WeatherDashboard() {
           unit="%"
           icon={Droplets}
           color="weather-humidity"
-          trend={weatherData.humidity > 70 ? "up" : weatherData.humidity < 40 ? "down" : "stable"}
+          trend={
+            weatherData.humidity > 70
+              ? "up"
+              : weatherData.humidity < 40
+              ? "down"
+              : "stable"
+          }
         />
 
         <WeatherMetricCard
@@ -125,7 +223,13 @@ export function WeatherDashboard() {
           unit="hPa"
           icon={Gauge}
           color="weather-pressure"
-          trend={weatherData.pressure > 1020 ? "up" : weatherData.pressure < 1000 ? "down" : "stable"}
+          trend={
+            weatherData.pressure > 1020
+              ? "up"
+              : weatherData.pressure < 1000
+              ? "down"
+              : "stable"
+          }
         />
 
         <WeatherMetricCard
@@ -143,7 +247,13 @@ export function WeatherDashboard() {
           unit="%"
           icon={Sprout}
           color="weather-soil"
-          trend={weatherData.soilMoisture > 60 ? "up" : weatherData.soilMoisture < 30 ? "down" : "stable"}
+          trend={
+            weatherData.soilMoisture > 60
+              ? "up"
+              : weatherData.soilMoisture < 30
+              ? "down"
+              : "stable"
+          }
         />
       </div>
 
@@ -151,7 +261,9 @@ export function WeatherDashboard() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full">
             <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Fecha</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Fecha
+              </h3>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -175,47 +287,39 @@ export function WeatherDashboard() {
             </div>
 
             <div className="flex flex-col gap-2 flex-1">
-              <h3 className="text-sm font-medium text-muted-foreground">Rango de tiempo</h3>
+              <h3 className="text-sm font-medium text-muted-foreground">
+                Rango de tiempo
+              </h3>
               <div className="flex gap-1 bg-muted/50 rounded-lg p-1">
                 <button
-                  onClick={() => setTimeRange("15min")}
+                  onClick={() => setTimeRange("last")}
                   className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                    timeRange === "15min"
+                    timeRange === "last"
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  15 minutos
+                  Últimos 15 minutos
                 </button>
                 <button
-                  onClick={() => setTimeRange("6hours")}
+                  onClick={() => setTimeRange("half-hour")}
                   className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                    timeRange === "6hours"
+                    timeRange === "half-hour"
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  6 horas
+                  Cada media hora
                 </button>
                 <button
-                  onClick={() => setTimeRange("12hours")}
+                  onClick={() => setTimeRange("hour")}
                   className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                    timeRange === "12hours"
+                    timeRange === "hour"
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  12 horas
-                </button>
-                <button
-                  onClick={() => setTimeRange("24hours")}
-                  className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                    timeRange === "24hours"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  24 horas
+                  Cada hora
                 </button>
               </div>
             </div>
@@ -263,6 +367,92 @@ export function WeatherDashboard() {
           timeRange={timeRange}
         />
       </div>
+
+      <Card className="weather-gradient border-border/50 p-6">
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold">Histórico de Datos</h2>
+            <p className="text-muted-foreground">
+              Registro completo de mediciones del día
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-border/50 overflow-hidden">
+            <div className="max-h-[500px] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm">
+                  <TableRow>
+                    <TableHead className="font-semibold">
+                      Fecha y Hora
+                    </TableHead>
+                    <TableHead className="font-semibold text-right">
+                      Temperatura (°C)
+                    </TableHead>
+                    <TableHead className="font-semibold text-right">
+                      Humedad (%)
+                    </TableHead>
+                    <TableHead className="font-semibold text-right">
+                      Presión (hPa)
+                    </TableHead>
+                    <TableHead className="font-semibold text-right">
+                      Altitud (m)
+                    </TableHead>
+                    <TableHead className="font-semibold text-right">
+                      Humedad Suelo (%)
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {historicalData.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        No hay datos disponibles
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    historicalData
+                      .slice()
+                      .reverse()
+                      .map((data, index) => (
+                        <TableRow key={index} className="hover:bg-muted/50">
+                          <TableCell className="font-mono text-sm">
+                            {formatDateTime(data.timestamp)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {data.temperature.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {data.humidity !== null
+                              ? data.humidity.toFixed(2)
+                              : "-"}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {data.pressure.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {data.altitude.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {data.soilMoisture.toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {historicalData.length > 0 && (
+            <p className="text-sm text-muted-foreground text-center">
+              Mostrando {historicalData.length} registros
+            </p>
+          )}
+        </div>
+      </Card>
     </div>
-  )
+  );
 }
