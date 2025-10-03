@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { Tables } from "@/types/database.types";
 
 function averageByBlock(records: any[], blockMinutes: number) {
   if (records.length === 0) return [];
@@ -35,7 +36,7 @@ function averageByBlock(records: any[], blockMinutes: number) {
     .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 }
 
- async function isOlderThanOneMinute(): Promise<boolean> {
+async function isOlderThanOneMinute(): Promise<boolean> {
   const { data, error } = await supabase
     .from("espmetricas")
     .select("time")
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
     if (error) throw error;
     if (!data) data = [];
 
-    let result = data;
+    let result: Tables<"metricas_sensor">[] = data;
 
     if (interval === "last") {
       // Traer los últimos 60 registros
@@ -104,10 +105,19 @@ export async function GET(req: NextRequest) {
     } else if (interval === "hour") {
       result = averageByBlock(data, 60);
     } else {
-      return NextResponse.json({ error: "Invalid interval" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid interval" },
+        {
+          status: 400,
+        }
+      );
     }
     const outdated = await isOlderThanOneMinute();
-    return NextResponse.json({data:result, outdated });
+    return NextResponse.json(result, {
+      headers: {
+        outdated: outdated ? "1" : "0",
+      },
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

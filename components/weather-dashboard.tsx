@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Database, Tables } from "@/types/database.types";
+import { Tables } from "@/types/database.types";
 import {
   Table,
   TableBody,
@@ -47,23 +47,62 @@ interface WeatherData {
 
 type TimeRange = "last" | "half-hour" | "hour";
 
+function getLocalDateString(selectedDate: Date) {
+  const date = new Date(selectedDate);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function WeatherDashboard() {
+  const [isConnected, setIsConnected] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [historicalData, setHistoricalData] = useState<WeatherData[]>([]);
+  const [timeRange, setTimeRange] = useState<TimeRange>("last");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const [weatherData, setWeatherData] = useState<WeatherData>({
+    temperature: 0,
+    humidity: 0,
+    pressure: 0,
+    altitude: 0,
+    soilMoisture: 0,
+    timestamp: new Date(),
+    time: new Date(),
+  });
+
+  useEffect(() => {
+    retrieveData();
+
+    const interval = setInterval(() => {
+      retrieveData();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [timeRange, selectedDate]);
+
+  const refreshData = () => {
+    retrieveData();
+  };
+
   const retrieveData = async () => {
     try {
-      const date = new Date(selectedDate);
-      const formatted = date.toISOString().slice(0, 10);
-
       const params = new URLSearchParams({
-        from: formatted,
+        from: getLocalDateString(selectedDate),
         interval: timeRange,
       });
 
       const res = await fetch(`/api/v1/metrics?${params.toString()}`);
 
-      if (!res.ok) throw new Error("Error fetching metrics");
+      if (!res.ok) {
+        throw new Error("Error fetching metrics");
+      }
 
       const data: Tables<"metricas_sensor">[] = await res.json();
-      const lastMetric = data.data.at(-1);
+      const outdated = res.headers.get("outdated");
+
+      const lastMetric = data.at(-1);
 
       if (lastMetric) {
         const newData: WeatherData = {
@@ -89,8 +128,10 @@ export function WeatherDashboard() {
         });
         setLastUpdate(new Date());
       }
-      setIsConnected(!data.outdated);
-      const historical = data.data.map((row) => ({
+
+      setIsConnected(outdated !== "1");
+
+      const historical = data.map((row) => ({
         temperature: row.temperatura_c || 0,
         humidity: row.humedad_relativa || 0,
         pressure: row.presion_hpa || 0,
@@ -106,36 +147,6 @@ export function WeatherDashboard() {
     }
   };
 
-  const [weatherData, setWeatherData] = useState<WeatherData>({
-    temperature: 0,
-    humidity: 0,
-    pressure: 0,
-    altitude: 0,
-    soilMoisture: 0,
-    timestamp: new Date(),
-    time: new Date(),
-  });
-
-  const [isConnected, setIsConnected] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [historicalData, setHistoricalData] = useState<WeatherData[]>([]);
-  const [timeRange, setTimeRange] = useState<TimeRange>("last");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-
-  useEffect(() => {
-    retrieveData();
-
-    const interval = setInterval(() => {
-      retrieveData();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [timeRange, selectedDate]);
-
-  const refreshData = () => {
-    retrieveData();
-  };
-
   const formatDateTime = (date: Date) => {
     return format(date, "dd/MM/yyyy HH:mm:ss", { locale: es });
   };
@@ -143,7 +154,6 @@ export function WeatherDashboard() {
   const formatTime = (utcString: Date) => {
     const date = new Date(utcString);
     return date.toLocaleString("es-SV", {
-      weekday: "long",
       day: "2-digit",
       month: "long",
       year: "numeric",
@@ -161,8 +171,14 @@ export function WeatherDashboard() {
           <h1 className="text-3xl font-bold text-balance">
             Estación Meteorológica
           </h1>
-          <p className="text-muted-foreground">Monitoreo en tiempo real</p>
-          <p className="text-muted-foreground">{formatTime(lastUpdate)}</p>
+          {isConnected && (
+            <p className="text-lg font-bold text-muted-foreground">
+              Monitoreo en tiempo real
+            </p>
+          )}
+          <p className="text-lg font-bold text-muted-foreground">
+            Última registro {formatTime(lastUpdate)}
+          </p>
         </div>
 
         <div className="flex items-center gap-4">

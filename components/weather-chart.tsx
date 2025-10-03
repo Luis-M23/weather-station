@@ -40,7 +40,6 @@ export function WeatherChart({
   timeRange,
 }: WeatherChartProps) {
   const formatTime = (utcString: string) => {
-    console.log({ utcString });
     const date = new Date(utcString);
     return date.toLocaleTimeString("es-SV", {
       hour: "2-digit",
@@ -49,32 +48,10 @@ export function WeatherChart({
     });
   };
 
-  const getFilteredData = () => {
-    const now = new Date();
-    const minutesMap = {
-      last: 15,
-      "half-hour": 48,
-      hour: 24,
-    };
-
-    const minutes = minutesMap[timeRange];
-    const cutoffTime = new Date(now.getTime() - minutes * 60 * 1000);
-
-    return data.filter((item) => item.timestamp >= cutoffTime);
-  };
-
   const chartData = data.map((item) => ({
     ...item,
     time: formatTime(item.time),
-    foo: "bar",
   }));
-
-  console.log({ chartData });
-
-  // const chartData = getFilteredData().map((item) => ({
-  //   ...item,
-  //   time: formatTime(item.time),
-  // }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
