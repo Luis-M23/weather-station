@@ -57,7 +57,7 @@ function getLocalDateString(selectedDate: Date) {
 
 export function WeatherDashboard() {
   const [isConnected, setIsConnected] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [historicalData, setHistoricalData] = useState<WeatherData[]>([]);
   const [timeRange, setTimeRange] = useState<TimeRange>("last");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -101,6 +101,7 @@ export function WeatherDashboard() {
 
       const data: Tables<"metricas_sensor">[] = await res.json();
       const outdated = res.headers.get("outdated");
+      const lastDate = res.headers.get("last_date")|| new Date();
 
       const lastMetric = data.at(-1);
 
@@ -129,6 +130,7 @@ export function WeatherDashboard() {
         setLastUpdate(new Date());
       }
 
+      setLastUpdate(new Date(lastDate));
       setIsConnected(outdated !== "1");
 
       const historical = data.map((row) => ({
@@ -176,9 +178,11 @@ export function WeatherDashboard() {
               Monitoreo en tiempo real
             </p>
           )}
+          {lastUpdate &&(
           <p className="text-lg font-bold text-muted-foreground">
             Última registro {formatTime(lastUpdate)}
           </p>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

@@ -113,9 +113,17 @@ export async function GET(req: NextRequest) {
       );
     }
     const outdated = await isOlderThanOneMinute();
+
+    const { data: datos } = await supabase
+      .from("espmetricas")
+      .select("time")
+      .order("time", { ascending: false })
+      .limit(1);
+
     return NextResponse.json(result, {
       headers: {
         outdated: outdated ? "1" : "0",
+        last_date: datos.at(0)?.time,
       },
     });
   } catch (err: any) {
