@@ -180,7 +180,7 @@ export function WeatherDashboard() {
           )}
           {lastUpdate &&(
           <p className="text-lg font-bold text-muted-foreground">
-            Última registro {formatTime(lastUpdate)}
+            Último registro {formatTime(lastUpdate)}
           </p>
           )}
         </div>
