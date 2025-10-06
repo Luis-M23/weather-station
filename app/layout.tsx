@@ -7,6 +7,11 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Estacion Meteorológica',
   description: 'GRUPO A - Proyecto Estación Meteorológica',
+   icons: {
+    icon: '/clima.ico',
+    shortcut: '/clima.png',
+    apple: '/apple-clima-icon.png',
+  },
 }
 
 export default function RootLayout({
