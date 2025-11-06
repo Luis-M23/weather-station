@@ -18,6 +18,7 @@ import {
   Gauge,
   Mountain,
   Sprout,
+  Wind,
   RefreshCw,
   Wifi,
   WifiOff,
@@ -41,6 +42,7 @@ interface WeatherData {
   pressure: number;
   altitude: number;
   soilMoisture: number;
+  windSpeed: number;
   timestamp: Date;
   time: Date;
 }
@@ -68,6 +70,7 @@ export function WeatherDashboard() {
     pressure: 0,
     altitude: 0,
     soilMoisture: 0,
+    windSpeed: 0,
     timestamp: new Date(),
     time: new Date(),
   });
@@ -112,6 +115,8 @@ export function WeatherDashboard() {
           pressure: lastMetric.presion_hpa || 0,
           altitude: lastMetric.altitud_metros || 0,
           soilMoisture: lastMetric.humedad_suelo_pct || 0,
+          // Placeholder: adjust when backend provides wind speed
+          windSpeed: (lastMetric as any).velocidad_viento || 0,
           timestamp: new Date(lastMetric.time),
           time: lastMetric.time,
         };
@@ -124,6 +129,7 @@ export function WeatherDashboard() {
           pressure: 0,
           altitude: 0,
           soilMoisture: 0,
+          windSpeed: 0,
           timestamp: new Date(),
           time: new Date(),
         });
@@ -139,6 +145,7 @@ export function WeatherDashboard() {
         pressure: row.presion_hpa || 0,
         altitude: row.altitud_metros || 0,
         soilMoisture: row.humedad_suelo_pct || 0,
+        windSpeed: (row as any).velocidad_viento || 0,
         timestamp: new Date(row.time),
         time: row.time,
       }));
@@ -206,7 +213,7 @@ export function WeatherDashboard() {
       </div>
 
       {/* Métricas principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         <WeatherMetricCard
           title="Temperatura"
           value={weatherData.temperature.toFixed(1)}
@@ -247,6 +254,21 @@ export function WeatherDashboard() {
             weatherData.pressure > 1020
               ? "up"
               : weatherData.pressure < 1000
+              ? "down"
+              : "stable"
+          }
+        />
+
+        <WeatherMetricCard
+          title="Viento"
+          value={weatherData.windSpeed.toFixed(1)}
+          unit="km/h"
+          icon={Wind}
+          color="chart-3"
+          trend={
+            weatherData.windSpeed > 20
+              ? "up"
+              : weatherData.windSpeed < 5
               ? "down"
               : "stable"
           }
@@ -418,6 +440,9 @@ export function WeatherDashboard() {
                       Altitud (m)
                     </TableHead>
                     <TableHead className="font-semibold text-right">
+                      Velocidad viento (km/h)
+                    </TableHead>
+                    <TableHead className="font-semibold text-right">
                       Humedad Suelo (%)
                     </TableHead>
                   </TableRow>
@@ -454,6 +479,9 @@ export function WeatherDashboard() {
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {data.altitude.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {data.windSpeed.toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {data.soilMoisture.toFixed(2)}

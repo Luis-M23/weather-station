@@ -31,6 +31,7 @@ function averageByBlock(records: any[], blockMinutes: number) {
         presion_hpa: avg("presion_hpa"),
         temperatura_c: avg("temperatura_c"),
         humedad_relativa: avg("humedad_relativa"),
+        velocidad_viento: avg("velocidad_viento"),
       };
     })
     .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());

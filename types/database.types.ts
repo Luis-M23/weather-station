@@ -14,6 +14,7 @@ export type Database = {
           presion_hpa: number | null;
           temperatura_c: number | null;
           humedad_relativa: number | null;
+          velocidad_viento: number | null;
         };
         Insert: {
           time: Date;
@@ -24,6 +25,7 @@ export type Database = {
           presion_hpa?: number | null;
           temperatura_c?: number | null;
           humedad_relativa: number | null;
+          velocidad_viento?: number | null;
         };
         Update: {
           time: Date;
@@ -34,6 +36,7 @@ export type Database = {
           presion_hpa?: number | null;
           temperatura_c?: number | null;
           humedad_relativa: number | null;
+          velocidad_viento?: number | null;
         };
         Relationships: [];
       };
