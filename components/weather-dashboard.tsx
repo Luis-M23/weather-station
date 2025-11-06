@@ -121,7 +121,6 @@ export function WeatherDashboard() {
           time: lastMetric.time,
         };
         setWeatherData(newData);
-        setLastUpdate(new Date(lastMetric.time));
       } else {
         setWeatherData({
           temperature: 0,
@@ -133,7 +132,6 @@ export function WeatherDashboard() {
           timestamp: new Date(),
           time: new Date(),
         });
-        setLastUpdate(new Date());
       }
 
       setLastUpdate(new Date(lastDate));
